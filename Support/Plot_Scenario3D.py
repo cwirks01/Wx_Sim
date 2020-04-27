@@ -1,3 +1,9 @@
+"""
+Plot_Scenario3D.py must be ran after intial run of Wx_Simulation
+file ingest: Collections3D.csv, Target_deck3D.csv
+
+"""
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from mpl_toolkits.mplot3d import Axes3D
@@ -27,9 +33,8 @@ ax = Axes3D(fig)
 # current_axes = plt.gca()
 
 for index, target in tgt_location.iterrows():
-    # ax.plot_wireframe([target['xMin'], target['xMax']], [target['yMin'], target['yMax']],
-    #                   [target['zMin'], target['zMax']], c='r')
 
+    # Each vert is a different face of each polygon
     vert1 = [[target['xMin'], target['yMin'], target['zMin']],
              [target['xMin'], target['yMin'], target['zMax']],
              [target['xMin'], target['yMax'], target['zMax']],
@@ -62,22 +67,22 @@ for index, target in tgt_location.iterrows():
 
     verts = [vert1, vert2, vert3, vert4, vert5, vert6]
 
-    # x = [target['xMin'], target['xMax'], target['xMax'], target['xMin']]
-    # y = [target['yMin'], target['yMin'], target['yMax'], target['yMax']]
-    # z = [target['zMin'], target['zMax'], target['zMin'], target['zMax']]
+    ax.add_collection3d(Poly3DCollection(verts, linewidth=1, edgecolor='r', facecolors='cyan',
+                                         alpha=0.25))
 
-    # verts = [list(zip(x, y, z))]
 
-    ax.add_collection3d(Poly3DCollection(verts, linewidth=1, edgecolor='r', facecolors='cyan', alpha=0.25))
-    # rect = patches.Rectangle((int(target['left']), int(target['bottom'])), int(target['width']),
-    #                          int(target['height']), linewidth=1, edgecolor='r', facecolor='none')
-    # current_axes.add_patch(rect)
+ax.scatter(actor_location['xMin'], actor_location['yMin'], actor_location['zMin'], s=1,
+           color='black')
+ax.invert_xaxis()
 
-ax.scatter(actor_location['xMin'], actor_location['yMin'], actor_location['zMin'], s=1, color='black')
+# The limit of the plot is the region in question
+ax.set(xlim=(55, 125), ylim=(15, 80), zlim=(0, 60000))
+
 plt.title('Target Deck with Caught Actors')
 plt.xlabel('Longitude')
 plt.ylabel('Latitude')
-plt.annotate("%s Targets Caught \n%s Targets in deck" % (totalActorsCaught, totalTargets), xy=(0.8, 1.01),
-             xycoords='axes fraction', fontsize=10)
+ax.set_zlabel('Altitude (ft)')
+plt.annotate("%s Targets Caught \n%s Targets in deck" % (totalActorsCaught, totalTargets),
+             xy=(0.8, 1.01), xycoords='axes fraction', fontsize=10)
 # plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
 plt.show()
