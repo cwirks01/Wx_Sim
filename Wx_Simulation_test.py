@@ -11,6 +11,8 @@ import pandas as pd
 from rtree import index
 import random
 import time
+import numpy as np
+import re
 
 randomSeed = 0  # Need random seed to perform test
 NUM_TARGETS = 100
@@ -21,9 +23,6 @@ outputFile = os.path.abspath(os.path.join(ROOT, ".."))
 
 WxDATLocation = os.path.normpath(os.path.join(os.getcwd(), '..', 'Wx_data\\netcdf'))
 
-WxFileList = os.listdir(WxDATLocation)[random.randint(0, 7)]
-Wxdata = xr.open_dataset(os.path.join(WxDATLocation,WxFileList))
-
 timeEvalFile_path = os.path.join(outputFile, 'Desktop\\rtree_Stats_3D.csv')
 if os.path.isfile(timeEvalFile_path):
     timeEvalFile = pd.read_csv(timeEvalFile_path)
@@ -32,15 +31,19 @@ else:
                                              'TimeToProcessScenario (s)'], index=[0])
 
 
-# def is_cloudy(self, file):
-#     file_df = xr.open_dataset(file)
-#     self.lat = file_df.latitude
-#     self.lon = file_df.longitude
-#     self.time = file_df.time
-#     self.vars = file_df.vars
-#
-#
-def callWx(wx_df, xr_df):
+def WxDataPull(cloudHgt):
+    def Filter(string, substr):
+        return [str for str in string if any(sub in str for sub in substr)]
+
+    WxFileList = os.listdir(WxDATLocation)
+    WxfileWishList = Filter(WxFileList, [cloudHgt])
+    WxfileWishList = random.choice(WxfileWishList)
+    Wxdata = xr.open_dataset(os.path.join(WxDATLocation, WxfileWishList))
+
+    return Wxdata
+
+
+def callWx(wx_df):
     """
     method will determine the height of the actor to evaluate against cloud height
     after the height is determined, method will then determine the latitude actor to
@@ -49,17 +52,21 @@ def callWx(wx_df, xr_df):
     lon = wx_df.bounds[0]
     lat = wx_df.bounds[2]
     alt = wx_df.bounds[4]
-    if alt >= 25000:
-        idx_cloud = (25000 if lat >= 75 else 50000)
+
+    if alt <= 50000:
+        xr_df_hcc = WxDataPull('hcc').isel(initial_time0_hours=0, forecast_time1=0)
+        pCaC = xr_df_hcc.HCC_GDS4_SFC.sel(g4_lat_2=lat, g4_lon_3=lon, method='nearest').values
+        captured = np.random.choice((False, True), p=[pCaC, (1 - pCaC)])
+
+        #  Call the file attributed to the altitude, i.e. alt < 25000 will be the Medium Cloud Cover (MCC) file
+        if alt <= 25000 and captured:
+            xr_df_mcc = WxDataPull('mcc').isel(initial_time0_hours=0, forecast_time1=0)
+            pCaC = xr_df_mcc.MCC_GDS4_SFC.sel(g4_lat_2=lat, g4_lon_3=lon, method='nearest').values
+            captured = np.random.choice((False, True), p=[pCaC, (1 - pCaC)])
     else:
-        idx_cloud = (13000 if lat >= 75 else 23000)
+        captured = True
 
-    xr_df = xr_df.isel(initial_time0_hours=0, forecast_time1=0)
-    xr_df = xr_df.sel(g4_lat_2=lat, g4_lon_3=lon, method='nearest')
-
-    wx_data = []
-
-    return wx_data
+    return captured
 
 
 def _build_rtree(locations, rtreeIdx):
@@ -87,7 +94,7 @@ def generate_actors(num_of_actors=NUM_ACTORS):
     for actors_id in range(num_of_actors):
         randomPoint_x, randomPoint_y, randomPoint_z = (random.uniform(60, 120), random.uniform(15, 80),
                                                        int(random.uniform(12000, 60000)))
-        loc = tuple([(randomPoint_x, randomPoint_y, randomPoint_z,  randomPoint_x, randomPoint_y,
+        loc = tuple([(randomPoint_x, randomPoint_y, randomPoint_z, randomPoint_x, randomPoint_y,
                       randomPoint_z), "Actor: " + str(actors_id)])
         actors_loc.append(loc)
         actors['coord'] = actors_loc
@@ -104,8 +111,8 @@ def actors_in_collect(targetDeck, rtreeIdx):
     for targets_id, target in enumerate(targetDeck):
         hits = list(rtreeIdx.intersection(target[0], objects=True))
         if not hits == []:
-            # Take out "if callWx" when not using weather
-            collected = [(target[1], item.object, tuple(item.bbox)) for item in hits if callWx(item, Wxdata)]
+            # Take out "if callWx(item)" when not using weather
+            collected = [(target[1], item.object, tuple(item.bbox)) for item in hits if callWx(item)]
             all_collects.append(collected)
 
     return all_collects
