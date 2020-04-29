@@ -10,6 +10,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import pandas as pd
 import os
+# import cartopy.crs as ccrs
 
 ROOT = os.getcwd()
 filePath = os.path.abspath(os.path.join(ROOT, "..\\.."))
@@ -26,11 +27,17 @@ totalTargets = len(tgt_location.iloc[:, 0].drop_duplicates())
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-
 ax = Axes3D(fig)
+
+
+# proj_ax = plt.figure().add_axes([0, 0, 1, 1], projection=ccrs.Robinson())
+# cs = proj_ax.contourf(X, Y, Z, transform=ccrs.PlateCarree(), alpha=1)
+
+# ax.projection = proj_ax.projection
 
 # fig, ax = plt.subplots()
 # current_axes = plt.gca()
+# ax.plot_surface()
 
 for index, target in tgt_location.iterrows():
 

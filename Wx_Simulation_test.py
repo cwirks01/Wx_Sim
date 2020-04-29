@@ -31,9 +31,11 @@ else:
                                              'TimeToProcessScenario (s)'], index=[0])
 
 
+def Filter(string, substr):
+    return [str for str in string if any(sub in str for sub in substr)]
+
+
 def WxDataPull(cloudHgt):
-    def Filter(string, substr):
-        return [str for str in string if any(sub in str for sub in substr)]
 
     WxFileList = os.listdir(WxDATLocation)
     WxfileWishList = Filter(WxFileList, [cloudHgt])
@@ -143,10 +145,16 @@ def build_tgt_deck(num_targets=NUM_TARGETS):
 
 # Run script here
 if __name__ == '__main__':
+
+    # Script has issues running when 3d_index.index and 3d_index.data are present in the same folder
+    file_list_check = Filter(os.listdir(ROOT), ['3d_index'])
+    if not file_list_check == []:
+        [os.remove(os.path.join(ROOT, file)) for file in file_list_check]
+
     p = index.Property()
     p.dimension = 3
     p.dat_extension = 'data'
-    p.idx_extension = '3d_index'
+    p.idx_extension = 'index'
     idx3d = index.Index('3d_index', properties=p)
     # idx = index.Index(properties=p) # This is for 2D only!!!
     actors_gen = generate_actors(NUM_ACTORS)
